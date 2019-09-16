@@ -487,7 +487,7 @@ public class PhotoEditor implements BrushViewChangeListener {
                 addedViews.remove(removedView);
                 redoViews.add(removedView);
                 if (mOnPhotoEditorListener != null) {
-                    mOnPhotoEditorListener.onRemoveViewListener(viewType, addedViews.size());
+                    mOnPhotoEditorListener.onRemoveViewListener(viewType, addedViews.size(), removedView);
                 }
             }
         }
@@ -511,7 +511,7 @@ public class PhotoEditor implements BrushViewChangeListener {
             if (mOnPhotoEditorListener != null) {
                 Object viewTag = removeView.getTag();
                 if (viewTag != null && viewTag instanceof ViewType) {
-                    mOnPhotoEditorListener.onRemoveViewListener(((ViewType) viewTag), addedViews.size());
+                    mOnPhotoEditorListener.onRemoveViewListener(((ViewType) viewTag), addedViews.size(), removeView);
                 }
             }
         }
@@ -644,6 +644,9 @@ public class PhotoEditor implements BrushViewChangeListener {
                            @NonNull final SaveSettings saveSettings,
                            @NonNull final OnSaveListener onSaveListener) {
         Log.d(TAG, "Image Path: " + imagePath);
+        brushDrawingView.setSaveProcessing(true);
+        brushDrawingView.invalidate();
+
         parentView.saveFilter(new OnSaveBitmap() {
             @Override
             public void onBitmapReady(Bitmap saveBitmap) {
@@ -664,6 +667,7 @@ public class PhotoEditor implements BrushViewChangeListener {
                         try {
                             FileOutputStream out = new FileOutputStream(file, false);
                             if (parentView != null) {
+                                brushDrawingView.invalidate();
                                 parentView.setDrawingCacheEnabled(true);
                                 Bitmap drawingCache = saveSettings.isTransparencyEnabled()
                                         ? BitmapUtil.removeTransparency(parentView.getDrawingCache())
@@ -672,9 +676,11 @@ public class PhotoEditor implements BrushViewChangeListener {
                             }
                             out.flush();
                             out.close();
+                            brushDrawingView.invalidate();
                             Log.d(TAG, "Filed Saved Successfully");
                             return null;
                         } catch (Exception e) {
+                            Log.getStackTraceString(e);
                             e.printStackTrace();
                             Log.d(TAG, "Failed to save File");
                             return e;
@@ -691,6 +697,8 @@ public class PhotoEditor implements BrushViewChangeListener {
                         } else {
                             onSaveListener.onFailure(e);
                         }
+                        brushDrawingView.invalidate();
+//                        brushDrawingView.setSaveProcessing(false);
                     }
 
                 }.execute();
@@ -698,6 +706,7 @@ public class PhotoEditor implements BrushViewChangeListener {
 
             @Override
             public void onFailure(Exception e) {
+                brushDrawingView.setSaveProcessing(false);
                 onSaveListener.onFailure(e);
             }
         });
@@ -724,6 +733,8 @@ public class PhotoEditor implements BrushViewChangeListener {
     @SuppressLint("StaticFieldLeak")
     public void saveAsBitmap(@NonNull final SaveSettings saveSettings,
                              @NonNull final OnSaveBitmap onSaveBitmap) {
+        brushDrawingView.setSaveProcessing(true);
+        brushDrawingView.invalidate();
         parentView.saveFilter(new OnSaveBitmap() {
             @Override
             public void onBitmapReady(Bitmap saveBitmap) {
@@ -731,14 +742,14 @@ public class PhotoEditor implements BrushViewChangeListener {
                     @Override
                     protected void onPreExecute() {
                         super.onPreExecute();
+                        brushDrawingView.invalidate();
                         clearHelperBox();
-                        parentView.setDrawingCacheEnabled(false);
+                        parentView.setDrawingCacheEnabled(true);
                     }
 
                     @Override
                     protected Bitmap doInBackground(String... strings) {
                         if (parentView != null) {
-                            parentView.setDrawingCacheEnabled(true);
                             return saveSettings.isTransparencyEnabled() ?
                                     BitmapUtil.removeTransparency(parentView.getDrawingCache())
                                     : parentView.getDrawingCache();
@@ -756,6 +767,8 @@ public class PhotoEditor implements BrushViewChangeListener {
                         } else {
                             onSaveBitmap.onFailure(new Exception("Failed to load the bitmap"));
                         }
+                        brushDrawingView.invalidate();
+//                        brushDrawingView.setSaveProcessing(false);
                     }
 
                 }.execute();
@@ -764,6 +777,8 @@ public class PhotoEditor implements BrushViewChangeListener {
             @Override
             public void onFailure(Exception e) {
                 onSaveBitmap.onFailure(e);
+                Log.getStackTraceString(e);
+                brushDrawingView.setSaveProcessing(false);
             }
         });
     }
@@ -819,7 +834,7 @@ public class PhotoEditor implements BrushViewChangeListener {
             redoViews.add(removeView);
         }
         if (mOnPhotoEditorListener != null) {
-            mOnPhotoEditorListener.onRemoveViewListener(ViewType.BRUSH_DRAWING, addedViews.size());
+            mOnPhotoEditorListener.onRemoveViewListener(ViewType.BRUSH_DRAWING, addedViews.size(), null);
         }
     }
 

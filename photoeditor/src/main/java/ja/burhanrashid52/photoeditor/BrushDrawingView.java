@@ -50,6 +50,7 @@ public class BrushDrawingView extends View {
     private Path mPath;
     private float mTouchX, mTouchY;
     private static final float TOUCH_TOLERANCE = 4;
+    private boolean saveProcessing = false;
 
     private BrushViewChangeListener mBrushViewChangeListener;
 
@@ -176,6 +177,9 @@ public class BrushDrawingView extends View {
             canvas.drawPath(linePath.getDrawPath(), linePath.getDrawPaint());
         }
         canvas.drawPath(mPath, mDrawPaint);
+        if (saveProcessing) {
+            invalidate();
+        }
     }
 
     /**
@@ -266,6 +270,9 @@ public class BrushDrawingView extends View {
         }
     }
 
+    public void setSaveProcessing(boolean isProcessing) {
+        this.saveProcessing = isProcessing;
+    }
     @VisibleForTesting
     Paint getDrawingPaint() {
         return mDrawPaint;
